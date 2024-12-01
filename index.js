@@ -1,75 +1,71 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const app = express();
+const express = require('express');
+const bodyParser = require('body-parser');
+const axios = require('axios');
+require('dotenv').config();
 
-const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-// Webhook endpoint
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+// Xác minh webhook
+app.get('/webhook', (req, res) => {
+    const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
 
-  if (mode && token && mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("Webhook verified");
-    res.status(200).send(challenge);
-  } else {
-    res.status(403).send("Forbidden");
-  }
-});
-
-app.post("/webhook", (req, res) => {
-  const body = req.body;
-
-  if (body.object === "page") {
-    body.entry.forEach((entry) => {
-      const webhookEvent = entry.messaging[0];
-      console.log(webhookEvent);
-
-      const senderId = webhookEvent.sender.id;
-      const message = webhookEvent.message;
-
-      if (message && message.text.toLowerCase() === "chào") {
-        sendTextMessage(senderId, "Xin chào! Tôi là bot Messenger. 😊");
-      }
-    });
-
-    res.status(200).send("EVENT_RECEIVED");
-  } else {
-    res.sendStatus(404);
-  }
-});
-
-function sendTextMessage(recipientId, messageText) {
-  const request = require("request");
-
-  const messageData = {
-    recipient: { id: recipientId },
-    message: { text: messageText },
-  };
-
-  request(
-    {
-      uri: "https://graph.facebook.com/v11.0/me/messages",
-      qs: { access_token: PAGE_ACCESS_TOKEN },
-      method: "POST",
-      json: messageData,
-    },
-    (error, response, body) => {
-      if (!error && response.statusCode === 200) {
-        console.log("Message sent successfully.");
-      } else {
-        console.error("Unable to send message:", error);
-      }
+    if (mode && token === VERIFY_TOKEN) {
+        res.status(200).send(challenge);
+    } else {
+        res.sendStatus(403);
     }
-  );
+});
+
+// Xử lý tin nhắn từ người dùng
+app.post('/webhook', async (req, res) => {
+    const body = req.body;
+
+    if (body.object === 'page') {
+        body.entry.forEach(async (entry) => {
+            const webhook_event = entry.messaging[0];
+            const sender_psid = webhook_event.sender.id;
+
+            if (webhook_event.message && webhook_event.message.text) {
+                const userMessage = webhook_event.message.text.toLowerCase();
+                if (userMessage.includes('chào')) {
+                    await sendMessage(sender_psid, "Xin chào! Chúc bạn một ngày vui vẻ!");
+                }
+            }
+        });
+
+        res.status(200).send('EVENT_RECEIVED');
+    } else {
+        res.sendStatus(404);
+    }
+});
+
+// Hàm gửi tin nhắn
+async function sendMessage(sender_psid, response) {
+    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+
+    try {
+        await axios.post(
+            `https://graph.facebook.com/v15.0/me/messages`,
+            {
+                recipient: { id: sender_psid },
+                message: { text: response },
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${PAGE_ACCESS_TOKEN}`,
+                },
+            }
+        );
+    } catch (error) {
+        console.error('Error sending message:', error.response ? error.response.data : error.message);
+    }
 }
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Webhook is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Bot đang chạy tại http://localhost:${PORT}`));
