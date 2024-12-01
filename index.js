@@ -9,6 +9,11 @@ const PAGE_ACCESS_TOKEN = 'EAAgJ3Kw8EVABOZByQB3Jk5wkZAK2jd2tiPQeLCV9GTqw0cZC7CZC
 
 app.use(bodyParser.json());
 
+// Route chính để kiểm tra server hoạt động
+app.get("/", (req, res) => {
+  res.send("Bot Messenger đang chạy! 🚀");
+});
+
 // Webhook endpoint
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
