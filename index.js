@@ -1,97 +1,75 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const request = require('request');
+const express = require("express");
+const bodyParser = require("body-parser");
+const request = require("request");
 
 const app = express();
-const port = process.env.PORT || 3000;
 
-// Khai báo token trực tiếp
 const VERIFY_TOKEN = 'duchieu28071999haha';  // Thay thế bằng VERIFY_TOKEN của bạn
 const PAGE_ACCESS_TOKEN = 'EAAgJ3Kw8EVABOZByQB3Jk5wkZAK2jd2tiPQeLCV9GTqw0cZC7CZCdN0Iwe894QlpxWZAmt0YDSjeF1hD3ZCAY801Bc17Xqncx1sUvJgkV6PDOBZB0qg81qHiEI2RPqpPPDZBkwcBzIhAhxAjMy1Oa88wVZAtetQfuYEJUEPB5zXH1G93qVZCMGL6zju6NGHT6STZCxAt35IFfZCZCBFUEEcvV';  // Thay thế bằng PAGE_ACCESS_TOKEN của bạn
 
 app.use(bodyParser.json());
 
-// URL xác thực webhook
-app.get('/webhook', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-  
-  if (mode && token) {
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      console.log('Webhook xác thực thành công!');
-      res.status(200).send(challenge);
-    } else {
-      res.sendStatus(403);
-    }
+// Webhook endpoint
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode && token && mode === "subscribe" && token === VERIFY_TOKEN) {
+    console.log("Webhook verified");
+    res.status(200).send(challenge);
+  } else {
+    res.status(403).send("Forbidden");
   }
 });
 
-// Xử lý tin nhắn từ người dùng
-app.post('/webhook', (req, res) => {
+app.post("/webhook", (req, res) => {
   const body = req.body;
 
-  if (body.object === 'page') {
-    body.entry.forEach(function(entry) {
+  if (body.object === "page") {
+    body.entry.forEach((entry) => {
       const webhookEvent = entry.messaging[0];
-      const senderPsid = webhookEvent.sender.id;
-      
-      if (webhookEvent.message) {
-        handleMessage(senderPsid, webhookEvent.message);
+      console.log(webhookEvent);
+
+      const senderId = webhookEvent.sender.id;
+      const message = webhookEvent.message;
+
+      if (message && message.text.toLowerCase() === "chào") {
+        sendTextMessage(senderId, "Xin chào! Tôi là bot Messenger. 😊");
       }
     });
 
-    res.status(200).send('EVENT_RECEIVED');
+    res.status(200).send("EVENT_RECEIVED");
   } else {
     res.sendStatus(404);
   }
 });
 
-// Hàm xử lý tin nhắn
-function handleMessage(senderPsid, receivedMessage) {
-  let response;
-  
-  if (receivedMessage.text) {    
-    const message = receivedMessage.text.toLowerCase();
-    
-    if (message.includes('chào') || message.includes('hello') || message.includes('hi')) {
-      response = {
-        "text": `Xin chào! Rất vui được gặp bạn 😊`
-      }
-    } else {
-      // Trả lời mặc định nếu không phải lời chào
-      response = {
-        "text": "Xin lỗi, tôi chỉ có thể trả lời lời chào."
-      }
-    }
-  }
-  
-  callSendAPI(senderPsid, response);
-}
-
-// Gửi tin nhắn phản hồi
-function callSendAPI(senderPsid, response) {
-  const requestBody = {
-    "recipient": {
-      "id": senderPsid
-    },
-    "message": response
+function sendTextMessage(recipientId, messageText) {
+  const messageData = {
+    recipient: { id: recipientId },
+    message: { text: messageText },
   };
 
-  request({
-    "uri": "https://graph.facebook.com/v13.0/me/messages",
-    "qs": { "access_token": PAGE_ACCESS_TOKEN },
-    "method": "POST",
-    "json": requestBody
-  }, (err, res, body) => {
-    if (!err) {
-      console.log('Tin nhắn đã được gửi!');
-    } else {
-      console.error("Không thể gửi tin nhắn:" + err);
+  request(
+    {
+      uri: "https://graph.facebook.com/v11.0/me/messages",
+      qs: { access_token: PAGE_ACCESS_TOKEN },
+      method: "POST",
+      json: messageData,
+    },
+    (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        console.log("Message sent successfully.");
+      } else {
+        console.error("Unable to send message:", error);
+      }
     }
-  });
+  );
 }
 
-app.listen(port, () => {
-  console.log(`Server đang chạy tại port ${port}`);
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Webhook is running on port ${PORT}`);
 });
