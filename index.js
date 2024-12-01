@@ -1,16 +1,18 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Đặt giá trị VERIFY_TOKEN và PAGE_ACCESS_TOKEN trực tiếp
+const VERIFY_TOKEN = 'EAAgJ3Kw8EVABOZByQB3Jk5wkZAK2jd2tiPQeLCV9GTqw0cZC7CZCdN0Iwe894QlpxWZAmt0YDSjeF1hD3ZCAY801Bc17Xqncx1sUvJgkV6PDOBZB0qg81qHiEI2RPqpPPDZBkwcBzIhAhxAjMy1Oa88wVZAtetQfuYEJUEPB5zXH1G93qVZCMGL6zju6NGHT6STZCxAt35IFfZCZCBFUEEcvV';  // Thay thế bằng VERIFY_TOKEN của bạn
+const PAGE_ACCESS_TOKEN = 'duchieu28071999haha';  // Thay thế bằng PAGE_ACCESS_TOKEN của bạn
 
 app.use(bodyParser.json());
 
 // Xác minh webhook
 app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -47,8 +49,6 @@ app.post('/webhook', async (req, res) => {
 
 // Hàm gửi tin nhắn
 async function sendMessage(sender_psid, response) {
-    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-
     try {
         await axios.post(
             `https://graph.facebook.com/v15.0/me/messages`,
